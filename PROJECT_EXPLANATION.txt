@@ -1,0 +1,274 @@
+﻿================================================================================
+          FLOOR PLAN TO 3D VISUALIZER - PROJECT DOCUMENTATION & GUIDE
+================================================================================
+Course / Subject : Computer Graphics & Image Processing (CGIP)
+Academic Stage   : 5th Semester, B.Tech / BCA / Computer Science & Engineering
+Institution      : Navrachana University
+Project Name     : floorplan-3d-visualizer
+Version          : Version 1 (Parametric Dimensions to 3D Generation Pipeline)
+================================================================================
+
+1. PROJECT OVERVIEW
+--------------------------------------------------------------------------------
+The "Floor Plan to 3D Visualizer" is an interactive, web-based computer graphics
+application that bridges the gap between 2D architectural plans and real-time 3D
+spatial visualization.
+
+In architectural design and real-estate workflows, floor plans are traditionally
+drawn as 2D orthographic blueprints (specifying room width, length, wall height,
+and wall thickness). Visualizing how these dimensions translate into an actual
+physical space in 3D can be challenging.
+
+This project solves that problem by providing:
+1. A real-time parametric input pipeline where users can enter real-world room
+   measurements in millimeters (mm) or choose predefined room presets.
+2. A procedural 3D geometry engine built on Three.js that converts these 2D
+   metric values into clean, accurate 3D meshes with realistic architectural
+   materials, corner interlocking, and edge outlines.
+3. An interactive 3D WebGL viewport offering free 360-degree orbit rotation,
+   smooth zoom, pan, and dedicated camera projection angles (Top, Front, Side,
+   and Perspective).
+
+Current State (Version 1):
+  - Manual dimension input and preset-driven real-time 3D room generation.
+Future Roadmap (Version 2):
+  - Integrating an OpenCV (Python/WebAssembly) image processing parser to
+    automatically detect walls, doors, and rooms from uploaded floor plan images.
+
+
+2. TECHNOLOGIES & TOOLS USED ("WHAT THINGS ARE USED")
+--------------------------------------------------------------------------------
+The project is engineered using a modern, performant web graphics stack:
+
+A. CORE 3D GRAPHICS & RENDERING:
+   * Three.js (v0.186.0):
+     - The core 3D library used to create WebGL scenes, cameras, renderers,
+       geometries, materials, and lighting.
+     - Handles 3D vector math, transformations, shadows, and canvas updates.
+   * Three.js OrbitControls (three/examples/jsm/controls/OrbitControls.js):
+     - Enables mouse and touch interaction:
+       * Left Click + Drag : Rotate / Orbit around the room center.
+       * Right Click + Drag: Pan across the 3D plane.
+       * Scroll Wheel      : Zoom in and out.
+     - Configured with smooth inertia damping (dampingFactor: 0.05) and polar
+       angle constraints to prevent the camera from clipping beneath the floor.
+   * WebGL (Web Graphics Library):
+     - Hardware-accelerated GPU rendering pipeline executed directly in the
+       browser without external plugins.
+
+B. FRONTEND FRAMEWORK & APPLICATION LOGIC:
+   * React (v19.2.8) & React-DOM:
+     - Component-based architecture separating input controls, state management,
+       and the 3D rendering canvas.
+     - Utilizes React Hooks:
+       * useState: For handling dynamic room dimension inputs and camera view state.
+       * useEffect: For initializing the Three.js scene, mounting the canvas, and
+         rebuilding 3D geometry when parameters change.
+       * useRef: For persisting references to Three.js internal objects (scene,
+         camera, renderer, controls, room group) across React re-renders without
+         triggering unnecessary DOM refreshes.
+
+C. BUILD TOOLING & RUNTIME ENVIRONMENT:
+   * Vite (v8.3.0) & @vitejs/plugin-react:
+     - Lightning-fast ES module build tool and local development server.
+     - Offers instant Hot Module Replacement (HMR) during development and
+       optimized minified bundling for production.
+   * Node.js & npm:
+     - JavaScript runtime and package manager used to install dependencies and
+       execute build scripts.
+   * Oxlint (v1.81.0):
+     - Modern, ultra-fast Rust-based JavaScript and React linter ensuring high
+       code standards and zero syntax bugs.
+
+D. USER INTERFACE & STYLING:
+   * Vanilla CSS3 (src/styles/app.css):
+     - Custom, sleek dark-themed workspace layout (deep slate palette: #0f172a,
+       #1e293b, #334155).
+     - Responsive two-column split: left sidebar for controls and right canvas
+       viewport for 3D exploration.
+     - Polished interactive elements, badges, chips, stat summaries, and custom
+       form inputs.
+
+
+3. PROJECT STRUCTURE & CODE ORGANIZATION
+--------------------------------------------------------------------------------
+floorplan-3d-visualizer/
+│
+├── index.html              # Entry HTML file; mounts the React application root
+├── package.json            # Project manifest, dependencies, and npm scripts
+├── vite.config.js          # Vite build tool configuration with React plugin
+├── .oxlintrc.json          # Oxlint rules and linting configuration
+│
+└── src/
+    ├── main.jsx            # Application bootstrap with React 19 StrictMode
+    ├── App.jsx             # Master parent component coordinating state & layout
+    ├── index.css           # Global CSS resets and base typography
+    │
+    ├── components/
+    │   ├── DimensionForm.jsx # Input form, validation, presets & metric stats
+    │   └── Viewer3D.jsx      # Three.js viewport, WebGL loop & camera buttons
+    │
+    ├── geometry/
+    │   └── roomGenerator.js  # Pure 3D geometry engine (converts mm to 3D meshes)
+    │
+    └── styles/
+        └── app.css         # Complete styling for sidebar, header, buttons & canvas
+
+
+4. HOW IT WORKS (STEP-BY-STEP WORKFLOW)
+--------------------------------------------------------------------------------
+The application operates as an end-to-end parametric visualization pipeline:
+
+STEP 1: USER INPUT & PRESET SELECTION
+  - The user opens the web application. By default, standard room dimensions are
+    loaded:
+      * Width         : 5000 mm (5.0 meters) - along the X-axis
+      * Length        : 4000 mm (4.0 meters) - along the Z-axis
+      * Wall Height   : 3000 mm (3.0 meters) - along the Y-axis
+      * Wall Thickness:  150 mm (0.15 meters)
+  - Quick presets are available for single-click loading:
+      * Default Standard (5m x 4m)
+      * Small Bedroom    (3.5m x 3m)
+      * Spacious Hall    (7m x 5.5m)
+      * Square Studio    (4.5m x 4.5m)
+  - Alternatively, the user enters custom millimeter values into the form fields.
+
+STEP 2: CLIENT-SIDE VALIDATION & UNIT CONVERSION
+  - When the user clicks "Generate 3D", DimensionForm.jsx validates the values:
+      * Checks for required non-empty inputs.
+      * Enforces realistic physical constraints (minimum dimensions: width/length
+        >= 500mm, height >= 1000mm, thickness >= 50mm).
+      * Validates that wall thickness cannot exceed room width or length.
+  - Automatically calculates derived architectural metrics:
+      * Floor Area in square meters: (Width / 1000) * (Length / 1000) m²
+      * 3D Bounding Box dimensions.
+      * Coordinate Range bounds on the X and Z axes.
+  - Passes the validated data to the parent component (App.jsx), which updates
+    the state (oomData).
+
+STEP 3: PROCEDURAL 3D MESH GENERATION (roomGenerator.js)
+  - Viewer3D.jsx detects the updated oomData prop and invokes generateRoom().
+  - Units are scaled: Three.js uses 1 unit = 1 meter. Millimeters are converted
+    using: W = width * 0.001, L = length * 0.001, H = height * 0.001,
+    T = thickness * 0.001.
+  - The engine procedurally builds 5 interlocking box geometries:
+      1. Floor Mesh:
+         * Size: [W, 0.05, L]
+         * Position: Centered at Y = -0.025 (so floor top surface sits at Y = 0).
+      2. North Wall (Back):
+         * Size: [W, H, T]
+         * Position: Centered at [0, H/2, -L/2 + T/2].
+      3. South Wall (Front):
+         * Size: [W, H, T]
+         * Position: Centered at [0, H/2, L/2 - T/2].
+      4. West Wall (Left):
+         * Size: [T, H, L - 2*T]
+         * Position: Centered at [-W/2 + T/2, H/2, 0].
+      5. East Wall (Right):
+         * Size: [T, H, L - 2*T]
+         * Position: Centered at [W/2 - T/2, H/2, 0].
+
+  * CORNER INTERLOCKING & ANTI-Z-FIGHTING:
+    Notice that the West and East walls use length (L - 2*T). This ensures that
+    walls fit precisely between the North and South walls without overlapping at
+    corners. This eliminates "Z-fighting" (flickering artifacts caused by two
+    coplanar surfaces competing for GPU depth buffer resolution).
+
+  * ARCHITECTURAL EDGE OUTLINES:
+    For every wall and floor mesh, THREE.EdgesGeometry and THREE.LineSegments
+    are generated to overlay dark slate edge lines (#334155). This gives an
+    architectural CAD blueprint aesthetic.
+
+STEP 4: SCENE, LIGHTING & SHADOW CONFIGURATION
+  - A dark-slate background (#0f172a) is configured on the Three.js Scene.
+  - Three distinct light sources are created:
+      1. Ambient Light (0xffffff, intensity: 0.7):
+         Provides base illumination so no part of the room is pitch black.
+      2. Key Directional Light (0xffffff, intensity: 1.2 at position [10, 15, 10]):
+         Simulates sunlight casting realistic soft shadows onto the floor.
+         Uses THREE.PCFShadowMap for antialiased shadow borders.
+      3. Fill Directional Light (0x93c5fd, intensity: 0.5 at position [-10, 10, -10]):
+         Adds a subtle cool-blue bounce light to elevate depth perception.
+  - An adaptive ground grid (THREE.GridHelper) is rendered beneath the floor to
+    provide spatial scale and reference.
+
+STEP 5: RENDERING LOOP & USER INTERACTION
+  - A 60 FPS animation loop (equestAnimationFrame) continuously updates
+    OrbitControls and executes enderer.render(scene, camera).
+  - A ResizeObserver monitors the canvas container dynamically so the viewport
+    automatically adjusts aspect ratio and renderer resolution when the browser
+    window changes size.
+  - Camera Preset Controls:
+      * "Perspective 3D": Angled isometric-like overview (default).
+      * "Top View (2D)": Positioned directly above looking down on the floor plan.
+      * "Front View": Positioned straight ahead facing the room entrance.
+      * "Side View": Positioned along the lateral axis.
+
+STEP 6: RESOURCE CLEANUP & MEMORY MANAGEMENT
+  - Whenever room dimensions change or the component unmounts, previously allocated
+    Three.js meshes, edge lines, and geometries are explicitly disposed of using
+    .dispose() to prevent WebGL GPU memory leaks.
+
+
+5. HOW TO RUN THE PROJECT LOCALLY
+--------------------------------------------------------------------------------
+1. Prerequisites:
+   - Ensure Node.js (version 18 or newer) is installed on your computer.
+   - Verify by typing 
+ode -v and 
+pm -v in your terminal.
+
+2. Open Terminal in the project directory:
+   cd "C:\Users\Lenovo\OneDrive\Desktop\Navrachana University\5th Semester\floorplan-3d-visualizer"
+
+3. Install dependencies (if not already installed):
+   npm install
+
+4. Run the development server:
+   npm run dev
+
+5. Open the application:
+   Vite will display a local URL in your terminal, typically:
+   http://localhost:5173/
+   Open this URL in Google Chrome, Edge, or Firefox to interact with the project.
+
+6. Other available scripts:
+   - npm run build   -> Creates a production-ready, minified build in dist/
+   - npm run preview -> Previews the production build locally
+   - npm run lint    -> Runs Oxlint to check code quality
+
+
+6. KEY VIVA / PRESENTATION QUESTIONS & ANSWERS
+--------------------------------------------------------------------------------
+Q1: Why is Three.js used instead of raw WebGL?
+A1: WebGL requires writing low-level GLSL shaders, vertex buffers, and manual
+    matrix transformation math. Three.js is a high-level abstraction that
+    provides production-tested scene graphs, materials, lights, shadow mapping,
+    and camera controls, drastically reducing development complexity while
+    retaining full GPU acceleration.
+
+Q2: How is the millimeter input mapped to Three.js coordinates?
+A2: In Three.js, by standard convention, 1 world unit equals 1 meter. The input
+    values in millimeters (e.g., 5000 mm) are multiplied by 0.001 (or divided by
+    1000) to yield 5.0 meters, aligning with real-world architectural proportions.
+
+Q3: What is Z-fighting and how does this project prevent it?
+A3: Z-fighting is visual flickering that happens when two polygons share the exact
+    same 3D coordinates, causing the GPU's depth buffer (Z-buffer) to struggle
+    deciding which polygon is in front. In oomGenerator.js, East and West walls
+    have their length calculated as (Length - 2 * WallThickness), ensuring they
+    butt cleanly against the North and South walls with zero polygon overlap.
+
+Q4: How does React interact with Three.js in this architecture?
+A4: React handles user inputs, form validation, and reactive state in App.jsx
+    and DimensionForm.jsx. Three.js relies on an imperative WebGL context.
+    Viewer3D.jsx bridges the two by mounting a <div ref={mountRef} /> and
+    using useEffect to instantiate the Three.js scene once, while selectively
+    re-generating only the room mesh whenever oomData changes.
+
+Q5: What is the future scope of this project?
+A5: The current version implements Phase 1 (Parametric Dimension to 3D). Phase 2
+    will add an image upload feature where users can upload a 2D floor plan image
+    (PNG/JPG). An OpenCV pipeline will detect wall contours, segment rooms, and
+    automatically feed those coordinates into this Three.js 3D visualization engine.
+================================================================================

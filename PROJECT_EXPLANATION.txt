@@ -1,274 +1,150 @@
-﻿================================================================================
-          FLOOR PLAN TO 3D VISUALIZER - PROJECT DOCUMENTATION & GUIDE
+================================================================================
+          VIRTUAL 3D REAL ESTATE WALKTHROUGH SYSTEM - PROJECT GUIDE
 ================================================================================
 Course / Subject : Computer Graphics & Image Processing (CGIP)
 Academic Stage   : 5th Semester, B.Tech / BCA / Computer Science & Engineering
 Institution      : Navrachana University
-Project Name     : floorplan-3d-visualizer
-Version          : Version 1 (Parametric Dimensions to 3D Generation Pipeline)
+Project Name     : Virtual-3D-Real-Estate-Walkthrough-System
+Version          : Version 5 (Drag & Drop 3D Furniture Staging & Interior Design)
 ================================================================================
 
 1. PROJECT OVERVIEW
 --------------------------------------------------------------------------------
-The "Floor Plan to 3D Visualizer" is an interactive, web-based computer graphics
-application that bridges the gap between 2D architectural plans and real-time 3D
-spatial visualization.
+The "Virtual 3D Real Estate Walkthrough System" is an interactive, web-based
+computer graphics application that bridges the gap between 2D architectural
+blueprints and immersive 3D real estate walkthroughs.
 
-In architectural design and real-estate workflows, floor plans are traditionally
-drawn as 2D orthographic blueprints (specifying room width, length, wall height,
-and wall thickness). Visualizing how these dimensions translate into an actual
-physical space in 3D can be challenging.
+The project is structured into five progressive architectural phases:
+- Phase 1: Parametric single-room generation with exterior CAD OrbitControls.
+- Phase 2: First-person walkthrough (FPS), analytical door/window wall cutouts,
+           ceiling with interior lighting, and procedural canvas textures (hardwood/tile).
+- Phase 3: Multi-room apartment floor plans (1BHK Contemporary, 2BHK Executive),
+           third-person perspective (TPS) with articulated 3D visitor avatar,
+           anti-wall-clip spring-arm camera, and instant [V] key perspective switching.
+- Phase 4:
+  1. Automated 2D Blueprint Image Parser & Extrusion:
+     Upload any floor plan image (PNG, JPG, CAD export) or choose from built-in
+     samples (Studio, 1BHK, Loft). An in-browser Computer Vision (CV) pipeline
+     performs grayscale normalization, Otsu-style luminance thresholding,
+     run-length wall segment detection, and instantaneous 3D mesh extrusion.
+  2. Solar & Daylight Simulation Engine:
+     A dynamic 24-hour time-of-day slider (06:00 to 22:00) with real-time astronomical
+     sun elevation/azimuth calculations, rotating soft directional shadows, skybox
+     color-temperature transitions (Dawn, Noon, Sunset, Night), and night interior lights.
+- Phase 5:
+  Interactive 3D Drag & Drop Furniture Staging System:
+  A comprehensive interior design catalog featuring 8 categories and 80+ distinct
+  3D procedural models (Living Room, Bedroom, Dining Room, Kitchen, Home Office,
+  Entrance/Foyer, Bathroom, and Kids' Room). Users can drag furniture directly from
+  the catalog onto the 3D floor using floor plane raycasting, or click "+ Add to Room".
+  Placed items can be clicked in CAD Orbit view to attach an interactive Three.js
+  TransformControls 3D gizmo (Move, Rotate, Scale, +90° rotation, Duplicate, and Delete).
+  Staged furniture casts dynamic shadows from the solar engine, participates in avatar
+  physical collision, and automatically persists in browser localStorage with JSON
+  Export and Import capabilities.
 
-This project solves that problem by providing:
-1. A real-time parametric input pipeline where users can enter real-world room
-   measurements in millimeters (mm) or choose predefined room presets.
-2. A procedural 3D geometry engine built on Three.js that converts these 2D
-   metric values into clean, accurate 3D meshes with realistic architectural
-   materials, corner interlocking, and edge outlines.
-3. An interactive 3D WebGL viewport offering free 360-degree orbit rotation,
-   smooth zoom, pan, and dedicated camera projection angles (Top, Front, Side,
-   and Perspective).
 
-Current State (Version 1):
-  - Manual dimension input and preset-driven real-time 3D room generation.
-Future Roadmap (Version 2):
-  - Integrating an OpenCV (Python/WebAssembly) image processing parser to
-    automatically detect walls, doors, and rooms from uploaded floor plan images.
-
-
-2. TECHNOLOGIES & TOOLS USED ("WHAT THINGS ARE USED")
+2. TECHNOLOGIES & TOOLS USED
 --------------------------------------------------------------------------------
-The project is engineered using a modern, performant web graphics stack:
-
 A. CORE 3D GRAPHICS & RENDERING:
    * Three.js (v0.186.0):
-     - The core 3D library used to create WebGL scenes, cameras, renderers,
-       geometries, materials, and lighting.
-     - Handles 3D vector math, transformations, shadows, and canvas updates.
-   * Three.js OrbitControls (three/examples/jsm/controls/OrbitControls.js):
-     - Enables mouse and touch interaction:
-       * Left Click + Drag : Rotate / Orbit around the room center.
-       * Right Click + Drag: Pan across the 3D plane.
-       * Scroll Wheel      : Zoom in and out.
-     - Configured with smooth inertia damping (dampingFactor: 0.05) and polar
-       angle constraints to prevent the camera from clipping beneath the floor.
-   * WebGL (Web Graphics Library):
-     - Hardware-accelerated GPU rendering pipeline executed directly in the
-       browser without external plugins.
+     - WebGL scene graph, shadow-mapped directional lighting (PCFShadowMap),
+       materials (MeshStandardMaterial, MeshPhysicalMaterial), and custom geometry.
+   * Camera & Manipulation Controls:
+     - CAD OrbitControls with inertia damping, polar angle limits, and orthographic views.
+     - First-Person (FPS) PointerLockControls with 60 FPS sliding wall collision physics.
+     - Third-Person (TPS) over-the-shoulder chase camera with spring-arm collision avoidance.
+     - TransformControls: Interactive 3D transformation gizmo (Translate, Rotate, Scale)
+       with automatic floor clamping (Y = 0) and grid snapping (0.25m / 15°).
+   * Procedural Humanoid Avatar (src/geometry/avatarGenerator.js):
+     - Articulated 3D visitor model with shoulder/hip pivots and sinusoidal
+       limb oscillations for realistic walking locomotion.
+   * Procedural 3D Furniture Library (src/geometry/furnitureLibrary.js):
+     - 80+ distinct furniture models across 8 room categories constructed using
+       procedural Three.js geometries with PBR materials (walnut/oak woods, fabrics,
+       brushed brass, marble, smoked glass, and chrome).
+   * Solar Daylight Engine (src/components/Viewer3D.jsx):
+     - Dynamic spherical sun/moon vectors, directional shadow cascades,
+       hemisphere ambient light transitions, and point light intensification.
 
-B. FRONTEND FRAMEWORK & APPLICATION LOGIC:
-   * React (v19.2.8) & React-DOM:
-     - Component-based architecture separating input controls, state management,
-       and the 3D rendering canvas.
-     - Utilizes React Hooks:
-       * useState: For handling dynamic room dimension inputs and camera view state.
-       * useEffect: For initializing the Three.js scene, mounting the canvas, and
-         rebuilding 3D geometry when parameters change.
-       * useRef: For persisting references to Three.js internal objects (scene,
-         camera, renderer, controls, room group) across React re-renders without
-         triggering unnecessary DOM refreshes.
-
-C. BUILD TOOLING & RUNTIME ENVIRONMENT:
-   * Vite (v8.3.0) & @vitejs/plugin-react:
-     - Lightning-fast ES module build tool and local development server.
-     - Offers instant Hot Module Replacement (HMR) during development and
-       optimized minified bundling for production.
-   * Node.js & npm:
-     - JavaScript runtime and package manager used to install dependencies and
-       execute build scripts.
-   * Oxlint (v1.81.0):
-     - Modern, ultra-fast Rust-based JavaScript and React linter ensuring high
-       code standards and zero syntax bugs.
-
-D. USER INTERFACE & STYLING:
-   * Vanilla CSS3 (src/styles/app.css):
-     - Custom, sleek dark-themed workspace layout (deep slate palette: #0f172a,
-       #1e293b, #334155).
-     - Responsive two-column split: left sidebar for controls and right canvas
-       viewport for 3D exploration.
-     - Polished interactive elements, badges, chips, stat summaries, and custom
-       form inputs.
+B. APPLICATION & INTERACTION LOGIC:
+   * React (v19.2.8):
+     - Real-time state management for staged furniture, transform modes, catalog drawer,
+       and walkthrough navigation.
+   * HTML5 Drag & Drop API & Raycasting:
+     - Calculates mouse ray intersection against the 3D ground plane (Y = 0) to spawn
+       furniture exactly under the cursor.
+   * LocalStorage & JSON Serialization:
+     - Auto-saves staged furniture layouts per floor plan with Export/Import JSON support.
 
 
-3. PROJECT STRUCTURE & CODE ORGANIZATION
+3. KEY ALGORITHMS & MATHEMATICAL IMPLEMENTATIONS
 --------------------------------------------------------------------------------
-floorplan-3d-visualizer/
-│
-├── index.html              # Entry HTML file; mounts the React application root
-├── package.json            # Project manifest, dependencies, and npm scripts
-├── vite.config.js          # Vite build tool configuration with React plugin
-├── .oxlintrc.json          # Oxlint rules and linting configuration
-│
-└── src/
-    ├── main.jsx            # Application bootstrap with React 19 StrictMode
-    ├── App.jsx             # Master parent component coordinating state & layout
-    ├── index.css           # Global CSS resets and base typography
-    │
-    ├── components/
-    │   ├── DimensionForm.jsx # Input form, validation, presets & metric stats
-    │   └── Viewer3D.jsx      # Three.js viewport, WebGL loop & camera buttons
-    │
-    ├── geometry/
-    │   └── roomGenerator.js  # Pure 3D geometry engine (converts mm to 3D meshes)
-    │
-    └── styles/
-        └── app.css         # Complete styling for sidebar, header, buttons & canvas
+A. DRAG & DROP FLOOR PLANE RAYCASTING:
+   When an item is dragged from the catalog and dropped onto the 3D canvas:
+   1. Convert browser client coordinates (e.clientX, e.clientY) into normalized
+      device coordinates (NDC) in [-1, 1]:
+        NDC_x = (clientX - rect.left) / rect.width * 2 - 1
+        NDC_y = -((clientY - rect.top) / rect.height) * 2 + 1
+   2. Cast a ray from camera through the viewport:
+        raycaster.setFromCamera(new THREE.Vector2(NDC_x, NDC_y), camera)
+   3. Intersect the ray with the infinite horizontal floor plane at Y = 0:
+        Plane = THREE.Plane(normal = (0, 1, 0), constant = 0)
+        hitPoint = ray.intersectPlane(Plane)
+   4. Instantiate the procedural 3D model, set its position to (hitPoint.x, 0, hitPoint.z),
+      and add it to the scene's furniture group.
+
+B. TRANSFORM GIZMO & FLOOR CONSTRAINT:
+   1. When TransformControls is in 'translate' mode, the furniture's Y position is
+      clamped to Y = 0 on every 'change' event:
+        mesh.position.y = 0
+      This guarantees furniture never floats into mid-air or drops below the floor.
+   2. When dragging the gizmo, OrbitControls is automatically disabled to prevent
+      conflicting camera rotation:
+        transformControls.addEventListener('dragging-changed', e => orbitControls.enabled = !e.value)
+
+C. PHYSICAL COLLISION INJECTION:
+   Every frame in the 60 FPS physics loop, bounding boxes (THREE.Box3) are calculated
+   for all placed furniture items and appended to the room's obstacle colliders array.
+   The player/avatar's bounding capsule is checked against these boxes, preventing the
+   visitor from walking through placed sofas, tables, or beds!
 
 
-4. HOW IT WORKS (STEP-BY-STEP WORKFLOW)
+4. KEY VIVA / PRESENTATION QUESTIONS & ANSWERS
 --------------------------------------------------------------------------------
-The application operates as an end-to-end parametric visualization pipeline:
+Q1: What are all the navigation camera modes supported in the application?
+A1: 1. CAD Orbit View: Exterior dollhouse inspection with 360-degree rotation, zoom,
+       pan, and perspective/orthographic presets (Top, Front, Side).
+    2. First-Person Walkthrough (FPS): Eye-level navigation (1.65m) through the eyes
+       of the visitor with mouse-look and keyboard walking.
+    3. Third-Person Walkthrough (TPS): Over-the-shoulder chase camera tracking an
+       interactive 3D visitor avatar with anti-wall-clip spring-arm mechanics.
 
-STEP 1: USER INPUT & PRESET SELECTION
-  - The user opens the web application. By default, standard room dimensions are
-    loaded:
-      * Width         : 5000 mm (5.0 meters) - along the X-axis
-      * Length        : 4000 mm (4.0 meters) - along the Z-axis
-      * Wall Height   : 3000 mm (3.0 meters) - along the Y-axis
-      * Wall Thickness:  150 mm (0.15 meters)
-  - Quick presets are available for single-click loading:
-      * Default Standard (5m x 4m)
-      * Small Bedroom    (3.5m x 3m)
-      * Spacious Hall    (7m x 5.5m)
-      * Square Studio    (4.5m x 4.5m)
-  - Alternatively, the user enters custom millimeter values into the form fields.
+Q2: How does the 3D Drag & Drop Furniture Staging system work?
+A2: When an item is dragged from the catalog drawer onto the WebGL canvas, HTML5 drag
+    events pass the furniture type identifier. Three.js Raycaster calculates the exact
+    intersection between the camera ray and the floor plane at Y = 0. The procedural
+    model is instantiated with PBR materials, added to the scene, and automatically
+    selected with a Three.js TransformControls 3D gizmo.
 
-STEP 2: CLIENT-SIDE VALIDATION & UNIT CONVERSION
-  - When the user clicks "Generate 3D", DimensionForm.jsx validates the values:
-      * Checks for required non-empty inputs.
-      * Enforces realistic physical constraints (minimum dimensions: width/length
-        >= 500mm, height >= 1000mm, thickness >= 50mm).
-      * Validates that wall thickness cannot exceed room width or length.
-  - Automatically calculates derived architectural metrics:
-      * Floor Area in square meters: (Width / 1000) * (Length / 1000) m²
-      * 3D Bounding Box dimensions.
-      * Coordinate Range bounds on the X and Z axes.
-  - Passes the validated data to the parent component (App.jsx), which updates
-    the state (oomData).
+Q3: Why are procedural 3D geometries used instead of downloading 80+ external GLTF files?
+A3: Procedural modeling eliminates network latency, CORS security errors, broken external
+    links, and massive multi-megabyte downloads. All 80+ furniture models generate in
+    microseconds directly in memory, share cached PBR materials, run completely offline,
+    and guarantee consistent architectural scale and floor grounding (Y = 0).
 
-STEP 3: PROCEDURAL 3D MESH GENERATION (roomGenerator.js)
-  - Viewer3D.jsx detects the updated oomData prop and invokes generateRoom().
-  - Units are scaled: Three.js uses 1 unit = 1 meter. Millimeters are converted
-    using: W = width * 0.001, L = length * 0.001, H = height * 0.001,
-    T = thickness * 0.001.
-  - The engine procedurally builds 5 interlocking box geometries:
-      1. Floor Mesh:
-         * Size: [W, 0.05, L]
-         * Position: Centered at Y = -0.025 (so floor top surface sits at Y = 0).
-      2. North Wall (Back):
-         * Size: [W, H, T]
-         * Position: Centered at [0, H/2, -L/2 + T/2].
-      3. South Wall (Front):
-         * Size: [W, H, T]
-         * Position: Centered at [0, H/2, L/2 - T/2].
-      4. West Wall (Left):
-         * Size: [T, H, L - 2*T]
-         * Position: Centered at [-W/2 + T/2, H/2, 0].
-      5. East Wall (Right):
-         * Size: [T, H, L - 2*T]
-         * Position: Centered at [W/2 - T/2, H/2, 0].
+Q4: What actions can the user perform on staged furniture?
+A4: 1. Move across the floor plane (G key).
+    2. Rotate around the vertical Y-axis (R key or +90° quick snap button).
+    3. Scale dimensions (S key).
+    4. Duplicate with an offset (Duplicate button).
+    5. Delete individual items (Delete key / button) or Clear All.
+    6. Export and Import the entire staged interior layout as a JSON file.
+    7. Auto-save layout in browser localStorage.
 
-  * CORNER INTERLOCKING & ANTI-Z-FIGHTING:
-    Notice that the West and East walls use length (L - 2*T). This ensures that
-    walls fit precisely between the North and South walls without overlapping at
-    corners. This eliminates "Z-fighting" (flickering artifacts caused by two
-    coplanar surfaces competing for GPU depth buffer resolution).
-
-  * ARCHITECTURAL EDGE OUTLINES:
-    For every wall and floor mesh, THREE.EdgesGeometry and THREE.LineSegments
-    are generated to overlay dark slate edge lines (#334155). This gives an
-    architectural CAD blueprint aesthetic.
-
-STEP 4: SCENE, LIGHTING & SHADOW CONFIGURATION
-  - A dark-slate background (#0f172a) is configured on the Three.js Scene.
-  - Three distinct light sources are created:
-      1. Ambient Light (0xffffff, intensity: 0.7):
-         Provides base illumination so no part of the room is pitch black.
-      2. Key Directional Light (0xffffff, intensity: 1.2 at position [10, 15, 10]):
-         Simulates sunlight casting realistic soft shadows onto the floor.
-         Uses THREE.PCFShadowMap for antialiased shadow borders.
-      3. Fill Directional Light (0x93c5fd, intensity: 0.5 at position [-10, 10, -10]):
-         Adds a subtle cool-blue bounce light to elevate depth perception.
-  - An adaptive ground grid (THREE.GridHelper) is rendered beneath the floor to
-    provide spatial scale and reference.
-
-STEP 5: RENDERING LOOP & USER INTERACTION
-  - A 60 FPS animation loop (equestAnimationFrame) continuously updates
-    OrbitControls and executes enderer.render(scene, camera).
-  - A ResizeObserver monitors the canvas container dynamically so the viewport
-    automatically adjusts aspect ratio and renderer resolution when the browser
-    window changes size.
-  - Camera Preset Controls:
-      * "Perspective 3D": Angled isometric-like overview (default).
-      * "Top View (2D)": Positioned directly above looking down on the floor plan.
-      * "Front View": Positioned straight ahead facing the room entrance.
-      * "Side View": Positioned along the lateral axis.
-
-STEP 6: RESOURCE CLEANUP & MEMORY MANAGEMENT
-  - Whenever room dimensions change or the component unmounts, previously allocated
-    Three.js meshes, edge lines, and geometries are explicitly disposed of using
-    .dispose() to prevent WebGL GPU memory leaks.
-
-
-5. HOW TO RUN THE PROJECT LOCALLY
---------------------------------------------------------------------------------
-1. Prerequisites:
-   - Ensure Node.js (version 18 or newer) is installed on your computer.
-   - Verify by typing 
-ode -v and 
-pm -v in your terminal.
-
-2. Open Terminal in the project directory:
-   cd "C:\Users\Lenovo\OneDrive\Desktop\Navrachana University\5th Semester\floorplan-3d-visualizer"
-
-3. Install dependencies (if not already installed):
-   npm install
-
-4. Run the development server:
-   npm run dev
-
-5. Open the application:
-   Vite will display a local URL in your terminal, typically:
-   http://localhost:5173/
-   Open this URL in Google Chrome, Edge, or Firefox to interact with the project.
-
-6. Other available scripts:
-   - npm run build   -> Creates a production-ready, minified build in dist/
-   - npm run preview -> Previews the production build locally
-   - npm run lint    -> Runs Oxlint to check code quality
-
-
-6. KEY VIVA / PRESENTATION QUESTIONS & ANSWERS
---------------------------------------------------------------------------------
-Q1: Why is Three.js used instead of raw WebGL?
-A1: WebGL requires writing low-level GLSL shaders, vertex buffers, and manual
-    matrix transformation math. Three.js is a high-level abstraction that
-    provides production-tested scene graphs, materials, lights, shadow mapping,
-    and camera controls, drastically reducing development complexity while
-    retaining full GPU acceleration.
-
-Q2: How is the millimeter input mapped to Three.js coordinates?
-A2: In Three.js, by standard convention, 1 world unit equals 1 meter. The input
-    values in millimeters (e.g., 5000 mm) are multiplied by 0.001 (or divided by
-    1000) to yield 5.0 meters, aligning with real-world architectural proportions.
-
-Q3: What is Z-fighting and how does this project prevent it?
-A3: Z-fighting is visual flickering that happens when two polygons share the exact
-    same 3D coordinates, causing the GPU's depth buffer (Z-buffer) to struggle
-    deciding which polygon is in front. In oomGenerator.js, East and West walls
-    have their length calculated as (Length - 2 * WallThickness), ensuring they
-    butt cleanly against the North and South walls with zero polygon overlap.
-
-Q4: How does React interact with Three.js in this architecture?
-A4: React handles user inputs, form validation, and reactive state in App.jsx
-    and DimensionForm.jsx. Three.js relies on an imperative WebGL context.
-    Viewer3D.jsx bridges the two by mounting a <div ref={mountRef} /> and
-    using useEffect to instantiate the Three.js scene once, while selectively
-    re-generating only the room mesh whenever oomData changes.
-
-Q5: What is the future scope of this project?
-A5: The current version implements Phase 1 (Parametric Dimension to 3D). Phase 2
-    will add an image upload feature where users can upload a 2D floor plan image
-    (PNG/JPG). An OpenCV pipeline will detect wall contours, segment rooms, and
-    automatically feed those coordinates into this Three.js 3D visualization engine.
+Q5: Do staged furniture items cast shadows and block avatar movement?
+A5: Yes. Every furniture mesh enables castShadow and receiveShadow, so shadows dynamically
+    rotate around furniture as the sun moves across the sky. Additionally, the physics
+    engine injects furniture Box3 bounding boxes into the collision detector, preventing
+    the player avatar from walking through furniture during tours.
 ================================================================================

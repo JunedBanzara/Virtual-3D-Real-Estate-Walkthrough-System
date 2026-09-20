@@ -3,23 +3,28 @@ import DimensionForm from './components/DimensionForm';
 import Viewer3D from './components/Viewer3D';
 import './styles/app.css';
 
-const DEFAULT_ROOM = {
+const DEFAULT_PROPERTY = {
+  layoutType: '1bhk',
   width: 5000,
   length: 4000,
   wallHeight: 3000,
-  wallThickness: 150
+  wallThickness: 150,
+  door: { enabled: true, width: 900, height: 2100 },
+  window: { enabled: true, width: 1500, height: 1200, sillHeight: 900 },
+  flooring: 'hardwood',
+  timeOfDay: 12.0
 };
 
 export default function App() {
-  const [roomData, setRoomData] = useState(DEFAULT_ROOM);
+  const [propertyData, setPropertyData] = useState(DEFAULT_PROPERTY);
 
-  const handleGenerate3D = (newDimensions) => {
-    setRoomData(newDimensions);
+  const handleUpdateProperty = (newData) => {
+    setPropertyData(newData);
   };
 
   return (
     <div className="app-container">
-      {/* Top Navigation Bar */}
+      {/* Top Header */}
       <header className="app-header">
         <div className="header-brand">
           <div className="brand-icon">
@@ -29,35 +34,35 @@ export default function App() {
             </svg>
           </div>
           <div>
-            <h1 className="brand-title">Floor Plan to 3D Visualizer</h1>
-            <span className="brand-subtitle">CGIP Project · Version 1 (Dimensions → 3D Pipeline)</span>
+            <h1 className="brand-title">Virtual 3D Real Estate Walkthrough System</h1>
+            <span className="brand-subtitle">Phase 4 · 2D Blueprint AI Scanner & Architectural Solar Engine</span>
           </div>
         </div>
 
         <div className="header-meta">
           <div className="status-chip">
             <span className="dot"></span>
-            Pipeline: <strong>Manual Dimensions Active</strong>
+            Engine: <strong>AI Blueprint & Solar Active</strong>
           </div>
           <div className="future-chip">
-            <span className="tag">Next:</span> OpenCV Image Parser
+            <span className="tag">Next:</span> WebXR VR/AR Immersion
           </div>
         </div>
       </header>
 
       {/* Main Workspace Layout */}
       <main className="workspace-layout">
-        {/* Left: Input Form Panel */}
+        {/* Left Configurator Pane */}
         <aside className="sidebar-pane">
           <DimensionForm
-            initialValues={DEFAULT_ROOM}
-            onGenerate={handleGenerate3D}
+            initialValues={DEFAULT_PROPERTY}
+            onGenerate={handleUpdateProperty}
           />
         </aside>
 
-        {/* Right / Center: 3D Interactive Viewport */}
+        {/* Right 3D Interactive Viewport */}
         <section className="viewport-pane">
-          <Viewer3D roomData={roomData} />
+          <Viewer3D roomData={propertyData} />
         </section>
       </main>
     </div>

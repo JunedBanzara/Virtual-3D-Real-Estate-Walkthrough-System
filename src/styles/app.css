@@ -1536,6 +1536,7 @@ input:checked + .slider:before {
 
 /* Top Toolbar Furniture Staging Button */
 .btn-furniture-staging {
+  pointer-events: auto;
   display: flex;
   align-items: center;
   gap: 0.45rem;
@@ -1591,6 +1592,7 @@ input:checked + .slider:before {
   z-index: 35;
   overflow: hidden;
   animation: slideDrawerRight 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: auto;
 }
 
 @keyframes slideDrawerRight {

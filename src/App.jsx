@@ -17,6 +17,7 @@ const DEFAULT_PROPERTY = {
 
 export default function App() {
   const [propertyData, setPropertyData] = useState(DEFAULT_PROPERTY);
+  const [isStagingOpen, setIsStagingOpen] = useState(false);
 
   const handleUpdateProperty = (newData) => {
     setPropertyData(newData);
@@ -35,14 +36,24 @@ export default function App() {
           </div>
           <div>
             <h1 className="brand-title">Virtual 3D Real Estate Walkthrough System</h1>
-            <span className="brand-subtitle">Phase 4 · 2D Blueprint AI Scanner & Architectural Solar Engine</span>
+            <span className="brand-subtitle">Phase 5 · 3D Drag & Drop Furniture Staging & Solar Engine</span>
           </div>
         </div>
 
         <div className="header-meta">
+          <button
+            type="button"
+            className={`btn-furniture-staging ${isStagingOpen ? 'active' : ''}`}
+            onClick={() => setIsStagingOpen((prev) => !prev)}
+            style={{ pointerEvents: 'auto' }}
+          >
+            <span className="staging-icon">🛋️</span>
+            <span>Furniture Staging</span>
+            <span className="staging-count-pill">80+ Models</span>
+          </button>
           <div className="status-chip">
             <span className="dot"></span>
-            Engine: <strong>AI Blueprint & Solar Active</strong>
+            Engine: <strong>3D Staging & Solar Active</strong>
           </div>
           <div className="future-chip">
             <span className="tag">Next:</span> WebXR VR/AR Immersion
@@ -57,12 +68,17 @@ export default function App() {
           <DimensionForm
             initialValues={DEFAULT_PROPERTY}
             onGenerate={handleUpdateProperty}
+            onOpenStaging={() => setIsStagingOpen(true)}
           />
         </aside>
 
         {/* Right 3D Interactive Viewport */}
         <section className="viewport-pane">
-          <Viewer3D roomData={propertyData} />
+          <Viewer3D
+            roomData={propertyData}
+            isStagingOpen={isStagingOpen}
+            onToggleStaging={setIsStagingOpen}
+          />
         </section>
       </main>
     </div>

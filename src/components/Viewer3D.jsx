@@ -24,7 +24,11 @@ function loadSavedStagedItems(layoutType) {
   return [];
 }
 
-export default function Viewer3D({ roomData }) {
+export default function Viewer3D({
+  roomData,
+  isStagingOpen: externalStagingOpen,
+  onToggleStaging: externalToggleStaging
+}) {
   const mountRef = useRef(null);
   const sceneRef = useRef(null);
   const cameraRef = useRef(null);
@@ -48,12 +52,29 @@ export default function Viewer3D({ roomData }) {
   const [isPointerLocked, setIsPointerLocked] = useState(false);
 
   // Furniture Staging System State
-  const [isCatalogOpen, setIsCatalogOpen] = useState(false);
+  const [internalCatalogOpen, setInternalCatalogOpen] = useState(false);
+  const isCatalogOpen = externalStagingOpen !== undefined ? externalStagingOpen : internalCatalogOpen;
+  const setIsCatalogOpen = useCallback(
+    (actionOrValue) => {
+      if (externalToggleStaging) {
+        if (typeof actionOrValue === 'function') {
+          externalToggleStaging((prev) => actionOrValue(externalStagingOpen !== undefined ? externalStagingOpen : prev));
+        } else {
+          externalToggleStaging(actionOrValue);
+        }
+      } else {
+        setInternalCatalogOpen(actionOrValue);
+      }
+    },
+    [externalStagingOpen, externalToggleStaging]
+  );
+
   const [stagedItems, setStagedItems] = useState(() => loadSavedStagedItems(roomData?.layoutType));
   const [selectedFurnitureId, setSelectedFurnitureId] = useState(null);
   const [gizmoMode, setGizmoMode] = useState('translate'); // 'translate' | 'rotate' | 'scale'
   const [snapEnabled, setSnapEnabled] = useState(true);
   const [isDragOverCanvas, setIsDragOverCanvas] = useState(false);
+  const dragCounterRef = useRef(0);
 
   const initialLayoutTypeRef = useRef(roomData?.layoutType);
   const furnitureGroupRef = useRef(new THREE.Group());
@@ -773,11 +794,15 @@ export default function Viewer3D({ roomData }) {
   // Viewport Pointer Pick for Furniture Selection
   const handleCanvasPointerDown = (e) => {
     pointerDownPosRef.current = { x: e.clientX, y: e.clientY };
+    if (transformControlsRef.current?.axis) {
+      isDraggingGizmoRef.current = true;
+    }
   };
 
   const handleCanvasPointerUp = (e) => {
     if (navMode !== 'orbit') return;
     if (isDraggingGizmoRef.current || wasDraggingGizmoRef.current) return;
+    if (transformControlsRef.current?.axis) return;
 
     const dx = Math.abs(e.clientX - pointerDownPosRef.current.x);
     const dy = Math.abs(e.clientY - pointerDownPosRef.current.y);
@@ -826,6 +851,7 @@ export default function Viewer3D({ roomData }) {
   const handleDragEnter = (e) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
+    dragCounterRef.current += 1;
     setIsDragOverCanvas(true);
   };
 
@@ -836,12 +862,17 @@ export default function Viewer3D({ roomData }) {
   };
 
   const handleDragLeave = (e) => {
-    if (e.currentTarget.contains(e.relatedTarget)) return;
-    setIsDragOverCanvas(false);
+    e.preventDefault();
+    dragCounterRef.current -= 1;
+    if (dragCounterRef.current <= 0) {
+      dragCounterRef.current = 0;
+      setIsDragOverCanvas(false);
+    }
   };
 
   const handleDrop = (e) => {
     e.preventDefault();
+    dragCounterRef.current = 0;
     setIsDragOverCanvas(false);
 
     let typeId = e.dataTransfer.getData('text/plain');
@@ -869,7 +900,23 @@ export default function Viewer3D({ roomData }) {
     const intersectPoint = new THREE.Vector3();
     const hit = raycaster.ray.intersectPlane(floorPlane, intersectPoint);
 
-    const spawnPos = hit ? intersectPoint : new THREE.Vector3(0, 0, 0);
+    let spawnPos;
+    if (hit && Math.abs(intersectPoint.x) < 25 && Math.abs(intersectPoint.z) < 25) {
+      spawnPos = intersectPoint;
+    } else if (orbitControlsRef.current) {
+      spawnPos = new THREE.Vector3(
+        orbitControlsRef.current.target.x,
+        0,
+        orbitControlsRef.current.target.z
+      );
+    } else {
+      spawnPos = new THREE.Vector3(0, 0, 0);
+    }
+
+    if (navMode !== 'orbit') {
+      switchNavMode('orbit');
+    }
+
     handleAddFurniture(typeId, spawnPos);
   };
 
@@ -895,10 +942,12 @@ export default function Viewer3D({ roomData }) {
     mesh.position.set(posX, 0, posZ);
     furnitureGroupRef.current.add(mesh);
 
-    if (navMode === 'orbit') {
-      transformControlsRef.current?.attach(mesh);
-      setSelectedFurnitureId(instanceId);
+    if (navMode !== 'orbit') {
+      switchNavMode('orbit');
     }
+
+    transformControlsRef.current?.attach(mesh);
+    setSelectedFurnitureId(instanceId);
 
     const newItem = {
       instanceId,
@@ -1167,8 +1216,9 @@ export default function Viewer3D({ roomData }) {
         <button
           type="button"
           className={`btn-furniture-staging ${isCatalogOpen ? 'active' : ''}`}
-          onClick={() => setIsCatalogOpen(true)}
-          title="Open Furniture Catalog & Staging Inspector"
+          onClick={() => setIsCatalogOpen((prev) => !prev)}
+          title="Toggle Furniture Catalog & Staging Inspector"
+          style={{ pointerEvents: 'auto' }}
         >
           <span className="staging-icon">🛋️</span>
           <span>Furniture Staging</span>

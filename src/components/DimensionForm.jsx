@@ -77,7 +77,7 @@ const MULTI_ROOM_CONFIGS = {
   }
 };
 
-export default function DimensionForm({ initialValues, onGenerate }) {
+export default function DimensionForm({ initialValues, onGenerate, onOpenStaging }) {
   const [formState, setFormState] = useState(initialValues);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('dimensions');
@@ -267,6 +267,31 @@ export default function DimensionForm({ initialValues, onGenerate }) {
           </div>
         </button>
       </div>
+
+      {/* 3D Furniture Staging Action Button */}
+      {onOpenStaging && (
+        <div className="furniture-staging-trigger-box" style={{ marginBottom: '1.25rem' }}>
+          <button
+            type="button"
+            className="btn-scan-blueprint"
+            style={{
+              background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.15), rgba(249, 115, 22, 0.15))',
+              border: '1px solid rgba(234, 179, 8, 0.45)',
+              boxShadow: '0 4px 14px rgba(234, 179, 8, 0.15)',
+              cursor: 'pointer'
+            }}
+            onClick={onOpenStaging}
+          >
+            <div className="scan-icon-pulse" style={{ background: 'rgba(234, 179, 8, 0.25)', color: '#fef08a' }}>
+              <span style={{ fontSize: '1.25rem' }}>🛋️</span>
+            </div>
+            <div className="scan-btn-content">
+              <strong style={{ color: '#fef08a' }}>3D Furniture Staging Catalog</strong>
+              <span style={{ color: '#cbd5e1' }}>Drag & drop 80+ models or stage with 3D gizmo</span>
+            </div>
+          </button>
+        </div>
+      )}
 
       {/* Solar & Daylight Simulation Section */}
       <div className="solar-simulation-panel">

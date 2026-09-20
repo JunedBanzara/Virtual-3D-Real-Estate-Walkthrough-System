@@ -922,6 +922,31 @@ export default function Viewer3D({ roomData }) {
   // LocalStorage Persistence
   const storageKey = `virtual_re_staged_furniture_${roomData?.layoutType || 'custom'}`;
 
+  const handleClearAllFurniture = useCallback(() => {
+    if (transformControlsRef.current) {
+      transformControlsRef.current.detach();
+    }
+    const group = furnitureGroupRef.current;
+    if (group) {
+      while (group.children.length > 0) {
+        const child = group.children[0];
+        group.remove(child);
+        child.traverse((c) => {
+          if (c.isMesh) {
+            c.geometry?.dispose();
+          }
+        });
+      }
+    }
+    setStagedItems([]);
+    setSelectedFurnitureId(null);
+    try {
+      localStorage.removeItem(storageKey);
+    } catch {
+      // ignore
+    }
+  }, [storageKey]);
+
   useEffect(() => {
     try {
       if (stagedItems.length > 0) {

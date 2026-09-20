@@ -325,6 +325,7 @@ export default function Viewer3D({ roomData }) {
         right.crossVectors(camera.up, forward).negate().normalize();
 
         const dispX = (right.x * vel.x + forward.x * vel.z) * delta;
+        const dispZ = (right.z * vel.x + forward.z * vel.z) * delta;
         const wallColliders = currentRoomGroupRef.current?.userData?.colliders || [];
         const colliders = [...wallColliders];
         if (furnitureGroupRef.current) {
@@ -520,7 +521,19 @@ export default function Viewer3D({ roomData }) {
     }
   }, [roomData?.timeOfDay]);
 
-  // Update Geometry when roomData / layout / scannedData changes
+  // Update Geometry ONLY when architectural parameters change (NOT on timeOfDay or navMode)
+  const architecturalKey = JSON.stringify({
+    layoutType: roomData?.layoutType,
+    scannedData: roomData?.scannedData,
+    width: roomData?.width,
+    length: roomData?.length,
+    wallHeight: roomData?.wallHeight,
+    wallThickness: roomData?.wallThickness,
+    door: roomData?.door,
+    window: roomData?.window,
+    flooring: roomData?.flooring
+  });
+
   useEffect(() => {
     const scene = sceneRef.current;
     const camera = cameraRef.current;
@@ -585,7 +598,54 @@ export default function Viewer3D({ roomData }) {
       camera.lookAt(0, 1.2, 0);
       orbitControls.update();
     }
-  }, [roomData, navMode, updateCeilingVisibility]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [architecturalKey, updateCeilingVisibility]);
+
+  // Handle camera mode changes (Orbit vs FPS vs TPS) without destroying room geometry
+  useEffect(() => {
+    const isWalkthrough = navMode === 'fps' || navMode === 'tps';
+    updateCeilingVisibility(isWalkthrough);
+    if (avatarRef.current) {
+      avatarRef.current.visible = navMode === 'tps';
+    }
+  }, [navMode, updateCeilingVisibility]);
+
+  // Synchronize staged furniture when layoutType changes
+  const prevLayoutTypeRef = useRef(roomData?.layoutType);
+  useEffect(() => {
+    if (prevLayoutTypeRef.current === roomData?.layoutType) return;
+    prevLayoutTypeRef.current = roomData?.layoutType;
+
+    const currentLayout = roomData?.layoutType || 'custom';
+    const group = furnitureGroupRef.current;
+    if (!group) return;
+
+    if (transformControlsRef.current) {
+      transformControlsRef.current.detach();
+    }
+    setSelectedFurnitureId(null);
+
+    while (group.children.length > 0) {
+      const child = group.children[0];
+      group.remove(child);
+      child.traverse((c) => {
+        if (c.isMesh) c.geometry?.dispose();
+      });
+    }
+
+    const saved = loadSavedStagedItems(currentLayout);
+    saved.forEach((item) => {
+      const mesh = createFurnitureMesh(item.typeId);
+      mesh.userData.instanceId = item.instanceId;
+      mesh.userData.name = item.name;
+      mesh.userData.typeId = item.typeId;
+      mesh.position.set(item.position.x, item.position.y || 0, item.position.z);
+      if (item.rotation) mesh.rotation.set(item.rotation.x, item.rotation.y, item.rotation.z);
+      if (item.scale) mesh.scale.set(item.scale.x, item.scale.y, item.scale.z);
+      group.add(mesh);
+    });
+    setStagedItems(saved);
+  }, [roomData?.layoutType]);
 
   // Handle Mode Switch
   const switchNavMode = (mode) => {
@@ -949,9 +1009,7 @@ export default function Viewer3D({ roomData }) {
 
   useEffect(() => {
     try {
-      if (stagedItems.length > 0) {
-        localStorage.setItem(storageKey, JSON.stringify(stagedItems));
-      }
+      localStorage.setItem(storageKey, JSON.stringify(stagedItems));
     } catch (e) {
       console.warn('LocalStorage save error:', e);
     }
@@ -1181,6 +1239,16 @@ export default function Viewer3D({ roomData }) {
             </div>
             <button type="button" className="btn-start-tour">
               Start Virtual Tour
+            </button>
+            <button
+              type="button"
+              className="btn-exit-walkthrough"
+              onClick={(e) => {
+                e.stopPropagation();
+                switchNavMode('orbit');
+              }}
+            >
+              Back to CAD Orbit View
             </button>
           </div>
         </div>

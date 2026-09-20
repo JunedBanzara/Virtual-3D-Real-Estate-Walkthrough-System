@@ -53,10 +53,13 @@ export default function Viewer3D({ roomData }) {
   const [selectedFurnitureId, setSelectedFurnitureId] = useState(null);
   const [gizmoMode, setGizmoMode] = useState('translate'); // 'translate' | 'rotate' | 'scale'
   const [snapEnabled, setSnapEnabled] = useState(true);
+  const [isDragOverCanvas, setIsDragOverCanvas] = useState(false);
 
   const initialLayoutTypeRef = useRef(roomData?.layoutType);
   const furnitureGroupRef = useRef(new THREE.Group());
   const transformControlsRef = useRef(null);
+  const isDraggingGizmoRef = useRef(false);
+  const wasDraggingGizmoRef = useRef(false);
   const raycasterRef = useRef(new THREE.Raycaster());
   const pointerDownPosRef = useRef({ x: 0, y: 0 });
 
@@ -200,6 +203,14 @@ export default function Viewer3D({ roomData }) {
 
     transformControls.addEventListener('dragging-changed', (event) => {
       orbitControls.enabled = !event.value;
+      isDraggingGizmoRef.current = event.value;
+      if (event.value) {
+        wasDraggingGizmoRef.current = true;
+      } else {
+        setTimeout(() => {
+          wasDraggingGizmoRef.current = false;
+        }, 150);
+      }
     });
 
     transformControls.addEventListener('objectChange', () => {
@@ -765,11 +776,12 @@ export default function Viewer3D({ roomData }) {
   };
 
   const handleCanvasPointerUp = (e) => {
-    if (navMode !== 'orbit' || transformControlsRef.current?.dragging) return;
+    if (navMode !== 'orbit') return;
+    if (isDraggingGizmoRef.current || wasDraggingGizmoRef.current) return;
 
     const dx = Math.abs(e.clientX - pointerDownPosRef.current.x);
     const dy = Math.abs(e.clientY - pointerDownPosRef.current.y);
-    if (dx > 5 || dy > 5) return; // Orbiting drag, not a click
+    if (dx > 6 || dy > 6) return; // Orbiting drag, not a click
 
     const container = mountRef.current;
     if (!container || !cameraRef.current) return;
@@ -781,6 +793,16 @@ export default function Viewer3D({ roomData }) {
 
     const raycaster = raycasterRef.current;
     raycaster.setFromCamera(mouse, cameraRef.current);
+
+    // If an item is already attached, check if user clicked on the gizmo helper itself
+    const gizmoHelper = sceneRef.current?.getObjectByName('TransformGizmoHelper');
+    if (gizmoHelper && transformControlsRef.current?.object) {
+      const gizmoHits = raycaster.intersectObject(gizmoHelper, true);
+      if (gizmoHits.length > 0) {
+        return; // Clicked on gizmo handle; keep active selection!
+      }
+    }
+
     const hits = raycaster.intersectObjects(furnitureGroupRef.current.children, true);
 
     if (hits.length > 0) {
@@ -801,14 +823,36 @@ export default function Viewer3D({ roomData }) {
   };
 
   // Drag-and-Drop from Catalog onto Canvas
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    setIsDragOverCanvas(true);
+  };
+
   const handleDragOver = (e) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
+    if (!isDragOverCanvas) setIsDragOverCanvas(true);
+  };
+
+  const handleDragLeave = (e) => {
+    if (e.currentTarget.contains(e.relatedTarget)) return;
+    setIsDragOverCanvas(false);
   };
 
   const handleDrop = (e) => {
     e.preventDefault();
-    const typeId = e.dataTransfer.getData('text/plain');
+    setIsDragOverCanvas(false);
+
+    let typeId = e.dataTransfer.getData('text/plain');
+    if (!typeId) {
+      try {
+        const json = JSON.parse(e.dataTransfer.getData('application/json'));
+        typeId = json?.typeId;
+      } catch {
+        // ignore
+      }
+    }
     if (!typeId) return;
 
     const container = mountRef.current;
@@ -823,9 +867,9 @@ export default function Viewer3D({ roomData }) {
     raycaster.setFromCamera(mouse, cameraRef.current);
     const floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
     const intersectPoint = new THREE.Vector3();
-    raycaster.ray.intersectPlane(floorPlane, intersectPoint);
+    const hit = raycaster.ray.intersectPlane(floorPlane, intersectPoint);
 
-    const spawnPos = intersectPoint || new THREE.Vector3(0, 0, 0);
+    const spawnPos = hit ? intersectPoint : new THREE.Vector3(0, 0, 0);
     handleAddFurniture(typeId, spawnPos);
   };
 
@@ -931,8 +975,15 @@ export default function Viewer3D({ roomData }) {
     const group = furnitureGroupRef.current;
     const child = group.children.find((c) => c.userData?.instanceId === id);
     if (child) {
+      if (navMode !== 'orbit') {
+        switchNavMode('orbit');
+      }
       transformControlsRef.current?.attach(child);
       setSelectedFurnitureId(id);
+      if (orbitControlsRef.current) {
+        orbitControlsRef.current.target.set(child.position.x, 0.8, child.position.z);
+        orbitControlsRef.current.update();
+      }
     }
   };
 
@@ -1141,12 +1192,20 @@ export default function Viewer3D({ roomData }) {
       {/* 3D WebGL Canvas with Click Picking and Drag-and-Drop */}
       <div
         ref={mountRef}
-        className="threejs-canvas-container"
+        className={`threejs-canvas-container ${isDragOverCanvas ? 'drag-over-active' : ''}`}
         onPointerDown={handleCanvasPointerDown}
         onPointerUp={handleCanvasPointerUp}
+        onDragEnter={handleDragEnter}
         onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-      />
+      >
+        {isDragOverCanvas && (
+          <div className="canvas-drag-indicator">
+            <span>📍 Drop anywhere on the 3D floor</span>
+          </div>
+        )}
+      </div>
 
       {/* Floating 3D Transform Gizmo HUD Toolbar */}
       {navMode === 'orbit' && selectedItem && (

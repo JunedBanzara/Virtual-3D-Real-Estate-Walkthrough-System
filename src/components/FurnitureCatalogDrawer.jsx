@@ -37,8 +37,7 @@ export default function FurnitureCatalogDrawer({
   if (!isOpen) return null;
 
   return (
-    <div className="furniture-drawer-overlay">
-      <div className="furniture-drawer">
+    <aside className="furniture-drawer-panel">
         {/* Header */}
         <div className="furniture-drawer-header">
           <div className="furniture-drawer-title-group">
@@ -129,6 +128,7 @@ export default function FurnitureCatalogDrawer({
                       draggable="true"
                       onDragStart={(e) => {
                         e.dataTransfer.setData('text/plain', item.id);
+                        e.dataTransfer.setData('application/json', JSON.stringify({ typeId: item.id }));
                         e.dataTransfer.effectAllowed = 'copy';
                       }}
                     >
@@ -245,7 +245,6 @@ export default function FurnitureCatalogDrawer({
             <span>Keys: <code>G</code> (Move), <code>R</code> (Rotate), <code>S</code> (Scale), <code>Del</code> (Delete), <code>Esc</code> (Deselect).</span>
           </div>
         </div>
-      </div>
-    </div>
-  );
+      </aside>
+    );
 }

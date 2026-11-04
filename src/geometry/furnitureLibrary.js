@@ -45,7 +45,11 @@ function createMaterials() {
     mirrorGlass: new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.05, metalness: 0.95 }),
     ceramicWhite: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2, metalness: 0.05 }),
     leatherCognac: new THREE.MeshStandardMaterial({ color: 0x854d0e, roughness: 0.55, metalness: 0.1 }),
-    displayScreen: new THREE.MeshStandardMaterial({ color: 0x050811, roughness: 0.2, metalness: 0.5 })
+    displayScreen: new THREE.MeshStandardMaterial({ color: 0x050811, roughness: 0.2, metalness: 0.5 }),
+    plantGreen: new THREE.MeshStandardMaterial({ color: 0x2d6a4f, roughness: 0.65, metalness: 0.05 }),
+    warmLightGlow: new THREE.MeshBasicMaterial({ color: 0xfef08a }),
+    potTerracotta: new THREE.MeshStandardMaterial({ color: 0x9a3412, roughness: 0.8, metalness: 0.05 }),
+    rugTextured: new THREE.MeshStandardMaterial({ color: 0xded8ce, roughness: 0.95, metalness: 0.0 })
   };
 }
 
@@ -89,10 +93,11 @@ export const FURNITURE_CATEGORIES = [
   { id: 'bedroom', name: 'Bedroom', icon: '🛏️' },
   { id: 'dining', name: 'Dining Room', icon: '🍽️' },
   { id: 'kitchen', name: 'Kitchen', icon: '🍳' },
+  { id: 'bathroom', name: 'Bathroom', icon: '🛁' },
   { id: 'office', name: 'Home Office', icon: '💻' },
   { id: 'foyer', name: 'Entrance / Foyer', icon: '🚪' },
-  { id: 'bathroom', name: 'Bathroom', icon: '🛁' },
-  { id: 'kids', name: "Kids' Room", icon: '🧸' }
+  { id: 'kids', name: "Kids' Room", icon: '🧸' },
+  { id: 'decor', name: 'Lighting & Decor', icon: '✨' }
 ];
 
 export const FURNITURE_CATALOG = [
@@ -203,7 +208,14 @@ export const FURNITURE_CATALOG = [
   { id: 'wardrobe_kids', category: 'kids', name: 'Junior 2-Door Wardrobe', dim: '0.9 × 0.5 × 1.6 m' },
   { id: 'chest_drawers_kids', category: 'kids', name: 'Pastel Chest of Drawers', dim: '0.8 × 0.42 × 0.9 m' },
   { id: 'storage_bench_kids', category: 'kids', name: 'Kids Toy Storage Bench', dim: '0.85 × 0.4 × 0.45 m' },
-  { id: 'activity_table_kids', category: 'kids', name: 'Round Activity Table & Stools', dim: '0.8 × 0.8 × 0.5 m' }
+  { id: 'activity_table_kids', category: 'kids', name: 'Round Activity Table & Stools', dim: '0.8 × 0.8 × 0.5 m' },
+
+  // 9. ✨ LIGHTING & DECOR (5 items)
+  { id: 'floor_lamp_arc', category: 'decor', name: 'Arched Brass Floor Lamp', dim: '0.6 × 0.6 × 1.9 m' },
+  { id: 'potted_monstera', category: 'decor', name: 'Indoor Potted Monstera Plant', dim: '0.5 × 0.5 × 1.2 m' },
+  { id: 'abstract_canvas_art', category: 'decor', name: 'Framed Gallery Canvas Art', dim: '1.2 × 0.05 × 0.9 m' },
+  { id: 'pendant_light_cluster', category: 'decor', name: 'Smoked Glass Pendant Chandelier', dim: '0.8 × 0.8 × 1.1 m' },
+  { id: 'persian_area_rug', category: 'decor', name: 'Large Hand-Knotted Area Rug', dim: '2.5 × 1.8 × 0.02 m' }
 ];
 
 // ---------------------------------------------------------------------------
@@ -1062,6 +1074,74 @@ export function createFurnitureMesh(typeId) {
         group.add(createMesh(new THREE.CylinderGeometry(0.15, 0.15, 0.03, 16), m.fabricKidsBlue, x, 0.28, z));
         addLegs(group, 0.22, 0.22, 0.26, 0.012, m.woodOak);
       }
+      break;
+    }
+
+    // -----------------------------------------------------------------------
+    // LIGHTING & DECOR
+    // -----------------------------------------------------------------------
+    case 'floor_lamp_arc': {
+      // Marble base
+      group.add(createMesh(new THREE.CylinderGeometry(0.2, 0.22, 0.05, 24), m.marbleWhite, 0, 0.025, 0));
+      // Curved brass pole
+      const poleGeo = new THREE.CylinderGeometry(0.015, 0.015, 1.6, 12);
+      group.add(createMesh(poleGeo, m.metalBrass, 0, 0.85, 0));
+      // Overhanging arm
+      const armGeo = new THREE.BoxGeometry(0.015, 0.015, 0.45);
+      group.add(createMesh(armGeo, m.metalBrass, 0, 1.65, 0.2));
+      // Shade & bulb
+      const shadeGeo = new THREE.SphereGeometry(0.14, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+      const shade = createMesh(shadeGeo, m.metalBrass, 0, 1.6, 0.4);
+      shade.rotation.x = Math.PI;
+      group.add(shade);
+      group.add(createMesh(new THREE.SphereGeometry(0.06, 12, 12), m.warmLightGlow, 0, 1.55, 0.4));
+      break;
+    }
+
+    case 'potted_monstera': {
+      // Ceramic pot
+      group.add(createMesh(new THREE.CylinderGeometry(0.22, 0.16, 0.45, 20), m.ceramicWhite, 0, 0.225, 0));
+      // Soil
+      group.add(createMesh(new THREE.CylinderGeometry(0.2, 0.2, 0.04, 16), m.potTerracotta, 0, 0.43, 0));
+      // Leaves (multiple rotated disks representing lush monstera fronds)
+      for (let i = 0; i < 7; i++) {
+        const ang = (i / 7) * Math.PI * 2;
+        const leafH = 0.55 + (i % 3) * 0.15;
+        const leaf = createMesh(new THREE.CylinderGeometry(0.12, 0.02, 0.45, 12), m.plantGreen, Math.cos(ang) * 0.16, leafH, Math.sin(ang) * 0.16);
+        leaf.rotation.z = Math.cos(ang) * 0.4;
+        leaf.rotation.x = Math.sin(ang) * 0.4;
+        group.add(leaf);
+      }
+      break;
+    }
+
+    case 'abstract_canvas_art': {
+      // Slim wood frame
+      group.add(createMesh(new THREE.BoxGeometry(1.2, 0.9, 0.04), m.woodOak, 0, 0.45, 0));
+      // Canvas surface
+      group.add(createMesh(new THREE.BoxGeometry(1.14, 0.84, 0.042), m.rugTextured, 0, 0.45, 0));
+      // Geometric accent lines
+      group.add(createMesh(new THREE.BoxGeometry(0.6, 0.08, 0.046), m.fabricNavy, -0.1, 0.5, 0));
+      group.add(createMesh(new THREE.BoxGeometry(0.06, 0.4, 0.046), m.metalBrass, 0.2, 0.4, 0));
+      break;
+    }
+
+    case 'pendant_light_cluster': {
+      // Suspension cord
+      group.add(createMesh(new THREE.CylinderGeometry(0.006, 0.006, 0.7, 8), m.metalBlack, 0, 0.75, 0));
+      // Smoked glass globe
+      group.add(createMesh(new THREE.SphereGeometry(0.2, 20, 20), m.glassSmoked, 0, 0.35, 0));
+      // Inner glowing filament
+      group.add(createMesh(new THREE.SphereGeometry(0.06, 12, 12), m.warmLightGlow, 0, 0.35, 0));
+      break;
+    }
+
+    case 'persian_area_rug': {
+      // Flat low-profile patterned rug
+      group.add(createMesh(new THREE.BoxGeometry(2.5, 0.015, 1.8), m.rugTextured, 0, 0.008, 0));
+      // Border trim
+      group.add(createMesh(new THREE.BoxGeometry(2.54, 0.016, 0.06), m.fabricNavy, 0, 0.009, 0.87));
+      group.add(createMesh(new THREE.BoxGeometry(2.54, 0.016, 0.06), m.fabricNavy, 0, 0.009, -0.87));
       break;
     }
 
